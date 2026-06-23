@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# Build ResBar, assemble ResBar.app by hand (no Xcode), and install a
-# LaunchAgent so it starts at login. Idempotent / safely re-runnable.
+# Build `res` in release mode, assemble Res.app by hand (no Xcode), and install
+# a LaunchAgent so the menu-bar app starts at login. Idempotent / re-runnable.
+# Deliberately does NOT `launchctl load` at the end — left unloaded for the human.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-EXE_NAME="ResBar"
-APP_NAME="ResBar.app"
+EXE_NAME="res"
+APP_NAME="Res.app"
 APP="$HERE/$APP_NAME"
-BUNDLE_ID="com.than.resbar"
+BUNDLE_ID="com.than.resurrect"
 PLIST="$HOME/Library/LaunchAgents/${BUNDLE_ID}.plist"
 
 echo "==> swift build -c release"
@@ -31,9 +32,9 @@ cat > "$APP/Contents/Info.plist" <<PLIST_EOF
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>ResBar</string>
+    <string>Res</string>
     <key>CFBundleDisplayName</key>
-    <string>ResBar</string>
+    <string>Res</string>
     <key>CFBundleIdentifier</key>
     <string>${BUNDLE_ID}</string>
     <key>CFBundleVersion</key>
@@ -65,9 +66,6 @@ echo "==> built bundle: $APP"
 echo "==> installing LaunchAgent: $PLIST"
 mkdir -p "$HOME/Library/LaunchAgents"
 
-# Unload any existing instance before rewriting (safe re-run).
-launchctl unload "$PLIST" 2>/dev/null || true
-
 cat > "$PLIST" <<AGENT_EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -78,6 +76,7 @@ cat > "$PLIST" <<AGENT_EOF
     <key>ProgramArguments</key>
     <array>
         <string>${APP}/Contents/MacOS/${EXE_NAME}</string>
+        <string>menubar</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
@@ -87,9 +86,8 @@ cat > "$PLIST" <<AGENT_EOF
 </plist>
 AGENT_EOF
 
-launchctl load "$PLIST" 2>/dev/null || true
-
 echo "==> done."
-echo "    App:        $APP"
-echo "    LaunchAgent: $PLIST (loaded; runs at login)"
+echo "    App:         $APP"
+echo "    LaunchAgent: $PLIST (installed, NOT loaded)"
 echo "    Launch now:  open \"$APP\""
+echo "    Enable login start:  launchctl load \"$PLIST\""

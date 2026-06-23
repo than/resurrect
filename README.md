@@ -1,16 +1,27 @@
-# res — resurrect your coding-agent sessions
+# resurrect (`res`)
 
-`res` surfaces your active and recent AI coding-agent conversations and brings any
-of them back to life in a fresh terminal window — resumed and ready. Reboot your
-machine, or accidentally quit every terminal, and `res restore` puts your
-workspace back the way it was.
+Resurrect your coding-agent sessions. `res` surfaces your active and recent AI
+coding-agent conversations and brings any of them back to life in a fresh
+terminal window — resumed and ready. Reboot your Mac, or accidentally quit every
+terminal, and **Restore last state** puts your workspace back the way it was.
 
-It's **agent-agnostic**: a small adapter describes where one coding agent keeps
-its sessions and how to resume one. `res` ships with a **Claude Code** adapter;
-adding Codex CLI, Gemini CLI, Aider, etc. is a single file (see *Adding an agent*).
+One self-contained Swift binary is both the **CLI** and the **menu-bar app** — no
+runtime to install, no subprocess bridge.
 
-The name is three left-hand keys (r-e-s, one-handed) and short for *resume /
+The name: three left-hand keys (r-e-s, one-handed) and short for *resume /
 restore / resurrect*.
+
+## Two adapter axes
+
+`res` is generic over **what** you resume and **where** it opens:
+
+- **`CodingAgent`** — *what to resume*. Ships with **Claude Code**; Codex CLI,
+  Gemini CLI, Aider, etc. are each one small adapter.
+- **`Terminal`** — *where/how to open the window*. Ships with **Ghostty**;
+  iTerm2, kitty, WezTerm, Terminal.app, etc. are each one small adapter.
+
+A launch is just: pick a `Terminal`, ask it to open a window running the
+`CodingAgent`'s resume command in the session's directory.
 
 ## How it works
 
@@ -20,117 +31,100 @@ are truly live:
 - **Title** comes from the agent's metadata (manual rename → auto title → first
   prompt).
 - **Liveness** requires both a "running" marker *and* a process that's actually
-  alive (`os.kill(pid, 0)`) — so sessions left behind by a crash, a reboot, or
+  alive (`kill(pid, 0)`) — so sessions left behind by a crash, a reboot, or
   quitting your terminal are correctly shown as not-live.
-
-Reopening a session launches a new terminal window running the agent's resume
-command in the session's original directory.
-
-## Components
-
-| Piece | Tech | Role |
-|---|---|---|
-| `res` CLI | Python package (stdlib only) | the brain: discovery, liveness, snapshot/restore, launch |
-| `picker/` | PHP + [Laravel Prompts](https://laravel.com/docs/13.x/prompts) | the interactive multiselect TUI (presentation only) |
-| `menubar/` | Swift `MenuBarExtra` | macOS menu-bar dropdown (thin client over the CLI) |
-
-The picker renders its UI to **stderr** and prints chosen ids to **stdout**, so
-the CLI stays the single source of truth for launching.
 
 ## Install
 
-`res` is pure-stdlib Python (no runtime deps), but it must be installed so its
-command has a **stable, absolute interpreter** — the menu-bar app launches it
-without a shell PATH. `uv tool` or `pipx` both provide that; either is fine.
+> Notarized Homebrew distribution is planned: `brew install --cask than/tap/resurrect`.
+
+From source (macOS, Swift toolchain via Xcode or Command Line Tools):
 
 ```sh
-# from a clone (recommended for now)
-uv tool install --editable .       # -> ~/.local/bin/res   (editable: edits take effect live)
-# or
-pipx install --editable .
+git clone https://github.com/than/resurrect && cd resurrect
+swift build -c release            # builds the `res` binary
+./build-app.sh                    # assembles Res.app + installs a (login) LaunchAgent
 
-# once published to PyPI
-uv tool install resurrect          # or:  pipx install resurrect
-```
+# put the CLI on your PATH
+ln -sf "$PWD/.build/release/res" ~/.local/bin/res
 
-> Avoid a bare `ln -s … python3` symlink: it depends on the *system* Python
-> being ≥3.10, and macOS ships 3.9. Use uv/pipx so the shebang pins a good Python.
-
-Picker UI (optional but recommended; needs PHP + Composer). Without it,
-`res pick` falls back to a plain numbered prompt:
-
-```sh
-cd picker && composer install
+# run the menu-bar app now / at login
+open Res.app
+launchctl load ~/Library/LaunchAgents/com.than.resurrect.plist
 ```
 
 ## Usage
 
 ```sh
 res list [--json] [--active] [--here] [-n N]   # table or JSON
-res pick [--here] [--active]                   # Laravel Prompts multiselect -> launch
-res open <id...> [--dry-run]                   # resurrect by id (prefixes ok)
+res pick [--here] [--active]                   # interactive multiselect TUI -> launch
+res open <id...> [--dry-run]                   # resurrect by id (unique prefixes ok)
 res snapshot                                   # save current live set
 res restore [--pick]                           # resurrect the last live set (reboot path)
-res agents                                     # list available adapters
+res agents                                     # list available agent adapters
+res terminals                                  # list terminal adapters (and the selected one)
 ```
 
-Status glyphs: `◉` busy · `○` idle (waiting on you) · `●` recently active · ` ` older.
-A `*` marks a manually renamed session.
+Run bare `res` in a terminal for the picker; launched as `Res.app` it runs the
+menu bar. Status glyphs: `◉` busy · `○` idle (waiting on you) · `●` recently
+active · ` ` older. A `*` marks a manually renamed session.
 
 ### Resurrect after a reboot
 
 `res` keeps `~/.local/state/res/last-live.json` current (every `list`/`pick` and
 every menu-bar poll re-snapshots the live set, but never overwrites it with an
-empty set). After restarting:
+empty set). After restarting — or quitting every window — "Restore last state"
+(menu bar) or `res restore` brings them all back.
 
-```sh
-res restore          # reopen everything that was live
-res restore --pick   # choose a subset first
+## Adding an agent adapter
+
+Conform to `CodingAgent` (`Sources/ResCore/Agents/CodingAgent.swift`) and register
+it in `AgentRegistry`:
+
+```swift
+struct CodexAgent: CodingAgent {
+    let name = "codex"
+    let display = "Codex CLI"
+    func available() -> Bool { /* e.g. ~/.codex exists */ }
+    func discover() -> [Session] { /* parse store; tag agent: name; use pidAlive() */ }
+    func resumeCommand(_ id: String, name: String?) -> String { "codex resume \(shellQuote(id))" }
+}
 ```
 
-## Adding an agent
+## Adding a terminal adapter
 
-Create `res/agents/<agent>.py` with a subclass of `CodingAgent` implementing
-three methods, then add it to `ALL_AGENTS` in `res/agents/__init__.py`:
+Conform to `Terminal` (`Sources/ResCore/Terminals/Terminal.swift`) and register it
+in `TerminalRegistry`:
 
-```python
-class CodexAgent(CodingAgent):
-    name = "codex"
-    display = "Codex CLI"
-
-    def available(self) -> bool:
-        return os.path.isdir(os.path.expanduser("~/.codex"))
-
-    def discover(self) -> list[Session]:
-        # parse this agent's session store; build Session objects tagged
-        # agent=self.name; use core.pid_alive(pid) for liveness.
-        ...
-
-    def resume_command(self, session_id, name=None) -> str:
-        return f"codex resume {shlex.quote(session_id)}"
+```swift
+struct ITermTerminal: Terminal {
+    let name = "iterm2"
+    let display = "iTerm2"
+    func available() -> Bool { /* iTerm.app installed */ }
+    func launchArgv(cwd: String, command: String) -> [String] { /* osascript ... */ }
+    func openWindow(cwd: String, command: String, dryRun: Bool) { /* run or print argv */ }
+}
 ```
 
-Everything else — terminal relaunch, snapshot/restore, the picker, the menu bar —
-works automatically for your agent. PRs welcome.
+Selection order: `RES_TERMINAL` → `$TERM_PROGRAM` (when run inside a terminal) →
+first available → Ghostty.
 
 ## Config (env vars)
 
-- `RES_TERMINAL` — terminal app to launch (default `Ghostty.app`).
+- `RES_TERMINAL` — force a terminal adapter by name (default: auto-detect).
 - `RES_ACTIVE_WINDOW` — minutes a session counts as "recently active" (default 10).
-- `RES_PICKER` — path to `pick.php` (defaults to the bundled one).
-
-## Launch primitive (macOS / Ghostty)
-
-```sh
-open -na Ghostty.app --args -e zsh -lc 'cd <cwd>; <resume cmd>; exec zsh -l'
-```
-
-`-n` is required to deliver `-e` and spawns a separate Ghostty instance per window
-(one dock icon each) — accepted as a reliable default; a single-instance variant
-may come later. `exec zsh -l` keeps the window alive after the conversation exits.
 
 ## Tests
 
 ```sh
-cd ~/res && uv run --with pytest python -m pytest tests/ -q
+swift test
 ```
+
+> Note: on **Command Line Tools only** (no full Xcode), the test target bakes in
+> the CLT swift-testing plugin/rpath via `unsafeFlags` in `Package.swift` so a
+> bare `swift test` works. The *product* targets have no such flags, so
+> `swift build -c release` (what packaging uses) stays fully portable.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

@@ -1,6 +1,21 @@
 import SwiftUI
+import AppKit
+import ResCore
 
-@main
+/// Launch the SwiftUI MenuBarExtra app. Called from main when no CLI args are
+/// present and there's no TTY (running as a .app), or via `res menubar`.
+/// Invoked from the main thread; we assert main-actor isolation rather than
+/// hopping, since this never returns.
+func runMenuBarApp() -> Never {
+    MainActor.assumeIsolated {
+        // Ensure we're an accessory (no dock icon) even without LSUIElement.
+        NSApplication.shared.setActivationPolicy(.accessory)
+        ResBarApp.main()
+    }
+    // ResBarApp.main() runs the run loop and does not return.
+    exit(0)
+}
+
 struct ResBarApp: App {
     @StateObject private var store = SessionStore()
 
@@ -22,7 +37,7 @@ struct ResMenu: View {
 
     var body: some View {
         if !store.available {
-            Text("\u{26A0}\u{FE0F} res unavailable")  // ⚠️
+            Text("\u{26A0}\u{FE0F} no sessions")  // ⚠️
             Divider()
             Button("\u{21BB} Refresh now") { store.refresh() }  // ↻
             Button("Quit") { NSApplication.shared.terminate(nil) }
@@ -48,8 +63,8 @@ struct ResMenu: View {
     }
 
     private func rowLabel(for session: Session) -> String {
-        let glyph = session.glyph
-        let prefix = glyph.isEmpty ? "  " : "\(glyph) "
-        return "\(prefix)\(session.displayTitle)"
+        let glyph = statusGlyph(session)
+        let prefix = glyph == " " ? "  " : "\(glyph) "
+        return "\(prefix)\(session.title)"
     }
 }
