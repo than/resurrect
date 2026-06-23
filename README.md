@@ -110,6 +110,29 @@ struct ITermTerminal: Terminal {
 Selection order: `RES_TERMINAL` → `$TERM_PROGRAM` (when run inside a terminal) →
 first available → Ghostty.
 
+## Compatibility
+
+### Terminals
+
+| Terminal | Status | Single-instance? | Notes |
+|---|---|---|---|
+| **Ghostty** | ✅ shipped | ⚠️ not yet | macOS Ghostty exposes no CLI/IPC to target a running instance, so each launch is a **separate app instance** (one dock icon per window). True single-instance (tabs in one window) would require driving it via Accessibility — planned/optional. |
+| kitty | adapter welcome | ✅ | `kitten @ launch` (remote control) opens windows/tabs in one instance, cleanly. |
+| WezTerm | adapter welcome | ✅ | `wezterm cli spawn` does the same — robust, no Accessibility needed. |
+| iTerm2 | adapter welcome | ✅ | scriptable via AppleScript (`create window/tab with command`). |
+| Apple Terminal | adapter welcome | ✅ | scriptable via AppleScript (`do script`). |
+
+If single-instance window management matters to you today, a kitty or WezTerm
+adapter is the robust path; Ghostty is the smoothest *default* but multi-instance
+until it gains IPC. (See [Adding a terminal adapter](#adding-a-terminal-adapter).)
+
+### Coding agents
+
+| Agent | Status |
+|---|---|
+| **Claude Code** | ✅ shipped |
+| Codex CLI, Gemini CLI, Aider, … | adapter welcome — see [Adding an agent adapter](#adding-an-agent-adapter) |
+
 ## Config (env vars)
 
 - `RES_TERMINAL` — force a terminal adapter by name (default: auto-detect).
