@@ -42,7 +42,7 @@ struct ResMenu: View {
             Button("\u{21BB} Refresh now") { store.refresh() }  // ↻
             Button("Quit") { NSApplication.shared.terminate(nil) }
         } else {
-            Text("\u{1F94C} \(store.liveCount) active")
+            Text("\u{1F9DF} \(store.liveCount) resurrected")
             Divider()
 
             ForEach(store.menuRows) { session in

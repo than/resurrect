@@ -17,9 +17,10 @@ final class SessionStore: ObservableObject {
     var liveSessions: [Session] { sessions.filter { $0.live } }
     var liveCount: Int { liveSessions.count }
 
-    /// Menu-bar title: 🥌 with the live count, or just 🥌 when zero.
+    /// Menu-bar title: 🧟 with the live count when sessions are alive, or a
+    /// 🪦 tombstone when none are (everything's buried).
     var menuBarTitle: String {
-        liveCount > 0 ? "\u{1F94C} \(liveCount)" : "\u{1F94C}"
+        liveCount > 0 ? "\u{1F9DF} \(liveCount)" : "\u{1FAA6}"
     }
 
     /// Rows: all live sessions first (newest), then recent, capped 12.

@@ -1,15 +1,19 @@
-# resurrect (`res`)
+# 🧟 Resurrect
+
+> The command is `res`.
 
 Resurrect your coding-agent sessions. `res` surfaces your active and recent AI
 coding-agent conversations and brings any of them back to life in a fresh
 terminal window — resumed and ready. Reboot your Mac, or accidentally quit every
-terminal, and **Restore last state** puts your workspace back the way it was.
+terminal, and **Restore last state** brings the whole workspace back exactly as
+it was.
 
 One self-contained Swift binary is both the **CLI** and the **menu-bar app** — no
-runtime to install, no subprocess bridge.
+runtime to install, no subprocess bridge. The menu bar shows 🪦 when nothing's
+running and 🧟 N when N sessions are alive.
 
-The name: three left-hand keys (r-e-s, one-handed) and short for *resume /
-restore / resurrect*.
+The name: three left-hand keys (r‑e‑s, one-handed), short for *resume / restore /
+resurrect*.
 
 ## Two adapter axes
 
@@ -60,7 +64,7 @@ res list [--json] [--active] [--here] [-n N]   # table or JSON
 res pick [--here] [--active]                   # interactive multiselect TUI -> launch
 res open <id...> [--dry-run]                   # resurrect by id (unique prefixes ok)
 res snapshot                                   # save current live set
-res restore [--pick]                           # resurrect the last live set (reboot path)
+res restore [--pick]                           # bring back the last live set (reboot path)
 res agents                                     # list available agent adapters
 res terminals                                  # list terminal adapters (and the selected one)
 ```
@@ -69,12 +73,12 @@ Run bare `res` in a terminal for the picker; launched as `Res.app` it runs the
 menu bar. Status glyphs: `◉` busy · `○` idle (waiting on you) · `●` recently
 active · ` ` older. A `*` marks a manually renamed session.
 
-### Resurrect after a reboot
+### Restore after a reboot (or quitting everything)
 
-`res` keeps `~/.local/state/res/last-live.json` current (every `list`/`pick` and
+`res` keeps `~/.local/state/res/last-live.json` current — every `list`/`pick` and
 every menu-bar poll re-snapshots the live set, but never overwrites it with an
-empty set). After restarting — or quitting every window — "Restore last state"
-(menu bar) or `res restore` brings them all back.
+empty set. So after a restart, **Restore last state** (menu bar) or `res restore`
+brings them all back.
 
 ## Adding an agent adapter
 
@@ -120,9 +124,9 @@ first available → Ghostty.
 swift test
 ```
 
-> Note: on **Command Line Tools only** (no full Xcode), the test target bakes in
-> the CLT swift-testing plugin/rpath via `unsafeFlags` in `Package.swift` so a
-> bare `swift test` works. The *product* targets have no such flags, so
+> On **Command Line Tools only** (no full Xcode), the test target bakes in the
+> CLT swift-testing plugin/rpath via `unsafeFlags` in `Package.swift` so a bare
+> `swift test` works. The *product* targets carry no such flags, so
 > `swift build -c release` (what packaging uses) stays fully portable.
 
 ## License
