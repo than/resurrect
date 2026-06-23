@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# Build `res` in release mode, assemble Res.app by hand (no Xcode), and install
-# a LaunchAgent so the menu-bar app starts at login. Idempotent / re-runnable.
-# Deliberately does NOT `launchctl load` at the end — left unloaded for the human.
+# Build `res` in release mode and assemble Res.app by hand (no Xcode).
+# Idempotent / re-runnable. Start-at-login is managed inside the app via
+# SMAppService ("Start at Login" in the menu / first-run prompt) — not a
+# LaunchAgent — so this script no longer installs one.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EXE_NAME="res"
-APP_NAME="Res.app"
+APP_NAME="Resurrect.app"
 APP="$HERE/$APP_NAME"
 BUNDLE_ID="com.than.resurrect"
-PLIST="$HOME/Library/LaunchAgents/${BUNDLE_ID}.plist"
+ICNS="$HERE/icon/Resurrect.icns"
 
 echo "==> swift build -c release"
 swift build -c release --package-path "$HERE"
@@ -22,9 +23,10 @@ fi
 
 echo "==> assembling $APP_NAME"
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BUILT_EXE" "$APP/Contents/MacOS/$EXE_NAME"
 chmod +x "$APP/Contents/MacOS/$EXE_NAME"
+[[ -f "$ICNS" ]] && cp "$ICNS" "$APP/Contents/Resources/Resurrect.icns"
 
 cat > "$APP/Contents/Info.plist" <<PLIST_EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -32,9 +34,11 @@ cat > "$APP/Contents/Info.plist" <<PLIST_EOF
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>Res</string>
+    <string>Resurrect</string>
     <key>CFBundleDisplayName</key>
-    <string>Res</string>
+    <string>Resurrect</string>
+    <key>CFBundleIconFile</key>
+    <string>Resurrect</string>
     <key>CFBundleIdentifier</key>
     <string>${BUNDLE_ID}</string>
     <key>CFBundleVersion</key>
@@ -62,32 +66,7 @@ if command -v codesign >/dev/null 2>&1; then
 fi
 
 echo "==> built bundle: $APP"
-
-echo "==> installing LaunchAgent: $PLIST"
-mkdir -p "$HOME/Library/LaunchAgents"
-
-cat > "$PLIST" <<AGENT_EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>${BUNDLE_ID}</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>${APP}/Contents/MacOS/${EXE_NAME}</string>
-        <string>menubar</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <false/>
-</dict>
-</plist>
-AGENT_EOF
-
 echo "==> done."
-echo "    App:         $APP"
-echo "    LaunchAgent: $PLIST (installed, NOT loaded)"
-echo "    Launch now:  open \"$APP\""
-echo "    Enable login start:  launchctl load \"$PLIST\""
+echo "    App:        $APP"
+echo "    Launch:     open \"$APP\""
+echo "    Login start: toggle \"Start at Login\" in the menu (SMAppService)."

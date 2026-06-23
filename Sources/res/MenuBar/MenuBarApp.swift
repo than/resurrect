@@ -24,7 +24,13 @@ struct ResBarApp: App {
             ResMenu(store: store)
         } label: {
             Text(store.menuBarTitle)
-                .onAppear { store.start() }
+                .onAppear {
+                    store.start()
+                    // Defer so the app is fully active before any modal prompt.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        store.maybePromptLaunchAtLogin()
+                    }
+                }
         }
         .menuBarExtraStyle(.menu)
     }
@@ -45,11 +51,16 @@ struct ResMenu: View {
             Text("\u{1F9DF} \(store.liveCount) resurrected")
             Divider()
 
-            ForEach(store.menuRows) { session in
-                Button {
-                    store.open(session)
-                } label: {
-                    Text(rowLabel(for: session))
+            // Grouped by workspace (the directory each session ran in).
+            ForEach(store.groupedRows) { group in
+                Section(group.workspace) {
+                    ForEach(group.sessions) { session in
+                        Button {
+                            store.open(session)
+                        } label: {
+                            Text(rowLabel(for: session))
+                        }
+                    }
                 }
             }
 
@@ -58,6 +69,9 @@ struct ResMenu: View {
             Button("\u{29C9} Open picker\u{2026}") { store.openPicker() }  // ⧉ …
             Button("\u{21BB} Refresh now") { store.refresh() }        // ↻
             Divider()
+            Button(store.launchAtLogin ? "\u{2713} Start at Login" : "Start at Login") {
+                store.toggleLaunchAtLogin()
+            }
             Button("Quit") { NSApplication.shared.terminate(nil) }
         }
     }

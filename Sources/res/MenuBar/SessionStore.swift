@@ -1,7 +1,15 @@
 import Foundation
 import SwiftUI
 import AppKit
+import ServiceManagement
 import ResCore
+
+/// A workspace (directory) and the sessions that ran in it.
+struct WorkspaceGroup: Identifiable {
+    let id: String        // full cwd (stable key)
+    let workspace: String // display name (folder)
+    let sessions: [Session]
+}
 
 /// Observable model that polls ResCore.discoverAll() IN-PROCESS on a background
 /// task and publishes results on the main actor. MainActor-isolated so all
@@ -31,6 +39,59 @@ final class SessionStore: ObservableObject {
             .filter { !liveIDs.contains($0.id) }
             .sorted { $0.mtime > $1.mtime }
         return Array((live + recent).prefix(12))
+    }
+
+    /// menuRows grouped by workspace (cwd), groups ordered by their most-recent
+    /// session, live-first within each group.
+    var groupedRows: [WorkspaceGroup] {
+        var order: [String] = []
+        var byCwd: [String: [Session]] = [:]
+        for s in menuRows {
+            if byCwd[s.cwd] == nil { order.append(s.cwd) }
+            byCwd[s.cwd, default: []].append(s)
+        }
+        return order.map { cwd in
+            let name = cwd == "-" ? "(no directory)" : (cwd as NSString).lastPathComponent
+            return WorkspaceGroup(id: cwd, workspace: name, sessions: byCwd[cwd] ?? [])
+        }
+    }
+
+    // MARK: - Launch at login (SMAppService)
+
+    @Published private(set) var launchAtLogin: Bool = (SMAppService.mainApp.status == .enabled)
+
+    func refreshLoginState() { launchAtLogin = (SMAppService.mainApp.status == .enabled) }
+
+    func toggleLaunchAtLogin() {
+        do {
+            if SMAppService.mainApp.status == .enabled {
+                try SMAppService.mainApp.unregister()
+            } else {
+                try SMAppService.mainApp.register()
+            }
+        } catch {
+            NSLog("res: login-item toggle failed: \(error.localizedDescription)")
+        }
+        refreshLoginState()
+    }
+
+    /// First-run only: ask whether to start at login.
+    func maybePromptLaunchAtLogin() {
+        let key = "res.askedLaunchAtLogin"
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: key) else { return }
+        defaults.set(true, forKey: key)
+        guard SMAppService.mainApp.status != .enabled else { return }
+        let alert = NSAlert()
+        alert.messageText = "Start Resurrect at login?"
+        alert.informativeText = "Keep the 🧟 in your menu bar across restarts. You can change this anytime from the menu."
+        alert.addButton(withTitle: "Start at Login")
+        alert.addButton(withTitle: "Not Now")
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn {
+            try? SMAppService.mainApp.register()
+            refreshLoginState()
+        }
     }
 
     func start() {

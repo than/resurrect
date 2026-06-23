@@ -114,17 +114,23 @@ first available → Ghostty.
 
 ### Terminals
 
-| Terminal | Status | Single-instance? | Notes |
-|---|---|---|---|
-| **Ghostty** | ✅ shipped | ⚠️ not yet | macOS Ghostty exposes no CLI/IPC to target a running instance, so each launch is a **separate app instance** (one dock icon per window). True single-instance (tabs in one window) would require driving it via Accessibility — planned/optional. |
-| kitty | adapter welcome | ✅ | `kitten @ launch` (remote control) opens windows/tabs in one instance, cleanly. |
-| WezTerm | adapter welcome | ✅ | `wezterm cli spawn` does the same — robust, no Accessibility needed. |
-| iTerm2 | adapter welcome | ✅ | scriptable via AppleScript (`create window/tab with command`). |
-| Apple Terminal | adapter welcome | ✅ | scriptable via AppleScript (`do script`). |
+> **Only Ghostty is installed and verified.** The other rows reflect each
+> terminal's *documented* capabilities — no adapter is built or tested for them
+> yet. Treat them as a roadmap, not a promise; contributions (and corrections)
+> welcome.
 
-If single-instance window management matters to you today, a kitty or WezTerm
-adapter is the robust path; Ghostty is the smoothest *default* but multi-instance
-until it gains IPC. (See [Adding a terminal adapter](#adding-a-terminal-adapter).)
+| Terminal | Status | Single-instance | Notes |
+|---|---|---|---|
+| **Ghostty** | ✅ shipped, verified | ❌ no *(verified)* | macOS Ghostty exposes no CLI/IPC to target a running instance, so each launch is a **separate app instance**. True single-instance would require driving it via Accessibility — TBD. |
+| kitty | 📋 unbuilt, untested | likely *(per docs)* | `kitten @ launch` remote control — not yet verified here. |
+| WezTerm | 📋 unbuilt, untested | likely *(per docs)* | `wezterm cli spawn` — not yet verified here. |
+| iTerm2 | 📋 unbuilt, untested | likely *(per docs)* | AppleScript-scriptable — not yet verified here. |
+| Apple Terminal | 📋 unbuilt, untested | likely *(per docs)* | AppleScript `do script` — not yet verified here. |
+
+If single-instance matters to you, kitty/WezTerm look like the robust paths *on
+paper* (their remote-control CLIs), but those adapters are unwritten and untested
+— that's exactly the kind of contribution that'd help. (See
+[Adding a terminal adapter](#adding-a-terminal-adapter).)
 
 ### Coding agents
 
