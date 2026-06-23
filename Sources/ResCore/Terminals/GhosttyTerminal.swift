@@ -23,6 +23,25 @@ public struct GhosttyTerminal: Terminal {
             ?? "Ghostty.app"
     }
 
+    // MARK: - Capabilities (P1)
+    //
+    // Ghostty has no documented CLI remote-control primitive, so single-instance
+    // launching is driven through the macOS Accessibility API (activate the
+    // running app, open a tab via keystroke, type the command). That requires
+    // the Accessibility permission, which ALSO unlocks window-geometry capture.
+    // The DEFAULT launch path (`launchArgv`, used by `openWindow`) remains the
+    // verified multi-instance `open -na … -ilc` and never depends on permission.
+    public var singleInstance: SingleInstanceMechanism { .accessibility }
+    public var requiredPermission: TerminalPermission { .accessibility }
+    public var canCaptureGeometry: Bool { true }
+
+    /// Ghostty's single-instance path is AX/AppleScript-driven, not argv-based,
+    /// so there is no single-instance argv. The Launcher dispatches it specially.
+    public func singleInstanceArgv(cwd: String, command: String) -> [String]? { nil }
+
+    /// Ghostty's macOS bundle identifier — used by the AX geometry/launch code.
+    public static let bundleIdentifier = "com.mitchellh.ghostty"
+
     public func available() -> Bool {
         // Try to resolve the app bundle; if we can't, assume present (open will
         // surface the error). Probe common locations.

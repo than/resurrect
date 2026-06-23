@@ -26,9 +26,16 @@ struct ResBarApp: App {
             Text(store.menuBarTitle)
                 .onAppear {
                     store.start()
-                    // Defer so the app is fully active before any modal prompt.
+                    // Defer so the app is fully active before showing any window.
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        store.maybePromptLaunchAtLogin()
+                        // First run: onboarding wizard (which includes the
+                        // start-at-login step). Otherwise, the legacy first-run
+                        // login prompt for users who onboarded before this flow.
+                        if !store.onboardingComplete {
+                            store.maybeShowOnboarding()
+                        } else {
+                            store.maybePromptLaunchAtLogin()
+                        }
                     }
                 }
         }
@@ -69,6 +76,8 @@ struct ResMenu: View {
             Button("\u{29C9} Open picker\u{2026}") { store.openPicker() }  // ⧉ …
             Button("\u{21BB} Refresh now") { store.refresh() }        // ↻
             Divider()
+            Text("\u{1F5A5} \(store.terminalStatus)")  // 🖥 terminal + mode
+            Button("\u{2699} Setup\u{2026}") { store.openSetup() }  // ⚙
             Button(store.launchAtLogin ? "\u{2713} Start at Login" : "Start at Login") {
                 store.toggleLaunchAtLogin()
             }

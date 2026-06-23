@@ -94,6 +94,37 @@ final class SessionStore: ObservableObject {
         }
     }
 
+    // MARK: - Terminal / permission status (for the menu)
+
+    /// Display name of the terminal the Launcher will use.
+    var terminalDisplay: String { Preferences.shared.resolvedTerminal().display }
+
+    /// True when single-instance launching is active for the resolved terminal.
+    var singleInstanceEnabled: Bool {
+        let t = Preferences.shared.resolvedTerminal()
+        return Preferences.shared.singleInstanceEnabled(
+            for: t, permissionGranted: { Permissions.granted($0) })
+    }
+
+    /// Short status line for the menu, e.g. "Ghostty · single-instance" or
+    /// "Ghostty · multi-instance".
+    var terminalStatus: String {
+        "\(terminalDisplay) · \(singleInstanceEnabled ? "single-instance" : "multi-instance")"
+    }
+
+    /// Whether first-run onboarding has been completed.
+    var onboardingComplete: Bool { Preferences.shared.onboardingComplete }
+
+    /// Open the onboarding/setup wizard.
+    func openSetup() {
+        OnboardingController.shared.show()
+    }
+
+    /// Show onboarding on first launch (no-op if already completed).
+    func maybeShowOnboarding() {
+        _ = OnboardingController.shared.showIfNeeded()
+    }
+
     func start() {
         guard pollTask == nil else { return }
         pollTask = Task { [weak self] in
@@ -117,6 +148,16 @@ final class SessionStore: ObservableObject {
             sessions = result
             ResCore.Snapshot.write(result)  // opportunistic snapshot
             available = true
+            // P4: best-effort geometry capture, only when Accessibility is
+            // trusted and the selected terminal supports it. No-op / fallback
+            // otherwise. RUNTIME-UNVERIFIED (drives the AX API on a real app).
+            if Preferences.shared.resolvedTerminal().canCaptureGeometry,
+               Permissions.accessibilityTrusted() {
+                let live = result.filter { $0.live }
+                Task.detached(priority: .background) {
+                    _ = GhosttyAccessibility.captureGeometry(for: live)
+                }
+            }
         } else {
             available = false
         }
@@ -129,6 +170,13 @@ final class SessionStore: ObservableObject {
         let resume = resumeFor(session)
         Task.detached(priority: .userInitiated) {
             Launcher.open(cwd: cwd, resume: resume)
+            // P4 restore: best-effort, gated on AX trust inside the helper. Give
+            // the new window a moment to appear before matching by title.
+            if Preferences.shared.resolvedTerminal().canCaptureGeometry,
+               Permissions.accessibilityTrusted() {
+                try? await Task.sleep(nanoseconds: 600_000_000)
+                _ = GhosttyAccessibility.restoreGeometry(for: session)
+            }
         }
         Task { await poll() }
     }

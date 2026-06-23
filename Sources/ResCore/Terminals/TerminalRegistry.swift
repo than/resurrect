@@ -4,7 +4,10 @@ import Foundation
 ///   RES_TERMINAL env > $TERM_PROGRAM detect > first available > Ghostty.
 public enum TerminalRegistry {
     public static var allTerminals: [Terminal] {
-        [GhosttyTerminal()]
+        // Ghostty is the verified, shipped adapter and stays first (the default).
+        // Kitty/WezTerm are UNTESTED adapters (neither installed here) based on
+        // documented CLIs — they only activate if available() detects them.
+        [GhosttyTerminal(), KittyTerminal(), WezTermTerminal()]
     }
 
     public static func availableTerminals() -> [Terminal] {
