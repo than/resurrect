@@ -38,8 +38,11 @@ public struct GhosttyTerminal: Terminal {
 
     public func launchArgv(cwd: String, command: String) -> [String] {
         let dir = cwd.isEmpty ? NSHomeDirectory() : cwd
-        let inner = "cd \(shellQuote(dir)); \(command); exec zsh -l"
-        return ["open", "-na", app, "--args", "-e", "zsh", "-lc", inner]
+        // `-il` (interactive + login) so ~/.zshrc is sourced. GUI-launched
+        // terminals get a sparse PATH; tools like `claude` are commonly added to
+        // PATH in ~/.zshrc, which a non-interactive `zsh -lc` would skip.
+        let inner = "cd \(shellQuote(dir)); \(command); exec zsh -il"
+        return ["open", "-na", app, "--args", "-e", "zsh", "-ilc", inner]
     }
 
     public func openWindow(cwd: String, command: String, dryRun: Bool) {

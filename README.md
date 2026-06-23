@@ -2,26 +2,23 @@
 
 > The command is `res`.
 
-Resurrect your coding-agent sessions. `res` surfaces your active and recent AI
-coding-agent conversations and brings any of them back to life in a fresh
-terminal window — resumed and ready. Reboot your Mac, or accidentally quit every
-terminal, and **Restore last state** brings the whole workspace back exactly as
+Resurrect your coding-agent sessions. `res` surfaces your active and recent AI coding-agent conversations and brings any of them back to life in a fresh terminal window — resumed and ready. Reboot your Mac? or accidentally quit every terminal? **Restore last state** brings the whole workspace back exactly as
 it was.
 
 One self-contained Swift binary is both the **CLI** and the **menu-bar app** — no
 runtime to install, no subprocess bridge. The menu bar shows 🪦 when nothing's
 running and 🧟 N when N sessions are alive.
 
-The name: three left-hand keys (r‑e‑s, one-handed), short for *resume / restore /
-resurrect*.
+The name: three left-hand keys (r‑e‑s, one-handed), short for _resume / restore /
+resurrect_.
 
 ## Two adapter axes
 
 `res` is generic over **what** you resume and **where** it opens:
 
-- **`CodingAgent`** — *what to resume*. Ships with **Claude Code**; Codex CLI,
+- `CodingAgent` — _what to resume_. Ships with **Claude Code**; Codex CLI,
   Gemini CLI, Aider, etc. are each one small adapter.
-- **`Terminal`** — *where/how to open the window*. Ships with **Ghostty**;
+- `Terminal` — _where/how to open the window_. Ships with **Ghostty**;
   iTerm2, kitty, WezTerm, Terminal.app, etc. are each one small adapter.
 
 A launch is just: pick a `Terminal`, ask it to open a window running the
@@ -34,7 +31,7 @@ are truly live:
 
 - **Title** comes from the agent's metadata (manual rename → auto title → first
   prompt).
-- **Liveness** requires both a "running" marker *and* a process that's actually
+- **Liveness** requires both a "running" marker _and_ a process that's actually
   alive (`kill(pid, 0)`) — so sessions left behind by a crash, a reboot, or
   quitting your terminal are correctly shown as not-live.
 
@@ -126,8 +123,15 @@ swift test
 
 > On **Command Line Tools only** (no full Xcode), the test target bakes in the
 > CLT swift-testing plugin/rpath via `unsafeFlags` in `Package.swift` so a bare
-> `swift test` works. The *product* targets carry no such flags, so
+> `swift test` works. The _product_ targets carry no such flags, so
 > `swift build -c release` (what packaging uses) stays fully portable.
+
+## Privacy & security
+
+Everything stays on your machine. `res` only **reads local files** (your agent's
+on-disk session data, e.g. `~/.claude/…`) and **launches local terminal windows**.
+It makes no network requests, phones nothing home, and collects no telemetry — no
+data ever leaves your device.
 
 ## License
 

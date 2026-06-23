@@ -90,7 +90,7 @@ final class SessionStore: ObservableObject {
         task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
         task.arguments = [
             "-na", app,
-            "--args", "-e", "zsh", "-lc", "res pick; exec zsh -l",
+            "--args", "-e", "zsh", "-ilc", "res pick; exec zsh -il",
         ]
         try? task.run()
     }

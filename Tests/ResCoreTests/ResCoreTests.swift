@@ -189,10 +189,10 @@ struct Fixture {
     let argv = term.launchArgv(cwd: "/Users/dev/proj", command: "claude --resume abc-123")
     #expect(Array(argv.prefix(5)) == ["open", "-na", "Ghostty.app", "--args", "-e"])
     #expect(argv[5] == "zsh")
-    #expect(argv[6] == "-lc")
+    #expect(argv[6] == "-ilc")   // interactive+login so ~/.zshrc (PATH) is sourced
     let last = try #require(argv.last)
     #expect(last.contains("cd /Users/dev/proj"))
-    #expect(last.hasSuffix("exec zsh -l"))
+    #expect(last.hasSuffix("exec zsh -il"))
 }
 
 @Test func launchArgvQuotesSpaceyCwd() throws {
