@@ -105,10 +105,32 @@ final class OnboardingModel: ObservableObject {
         prefs.chosenTerminalName = chosenName
     }
 
+    private var trustPollTask: Task<Void, Never>?
+
     func requestAccessibility() {
-        // Triggers the system prompt / opens System Settings. Refresh state.
+        // Triggers the system prompt / opens System Settings, then auto-polls so
+        // the grant is detected without the user clicking "Recheck".
         _ = Permissions.requestAccessibility(prompt: true)
         refreshTrust()
+        startTrustPolling()
+    }
+
+    /// Poll AX trust for ~60s after the user is sent to System Settings, so the
+    /// UI flips to "granted" on its own.
+    func startTrustPolling() {
+        guard trustPollTask == nil else { return }
+        trustPollTask = Task { [weak self] in
+            for _ in 0..<120 {
+                try? await Task.sleep(nanoseconds: 500_000_000)  // 0.5s
+                guard let self, !Task.isCancelled else { return }
+                if Permissions.accessibilityTrusted() {
+                    self.accessibilityTrusted = true
+                    self.trustPollTask = nil
+                    return
+                }
+            }
+            self?.trustPollTask = nil
+        }
     }
 
     func refreshTrust() {
@@ -130,6 +152,8 @@ final class OnboardingModel: ObservableObject {
 
     /// Mark onboarding done and persist the terminal choice.
     func finish() {
+        trustPollTask?.cancel()
+        trustPollTask = nil
         persistChoice()
         prefs.onboardingComplete = true
         OnboardingController.shared.close()

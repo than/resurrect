@@ -7,7 +7,7 @@ import ApplicationServices
 #endif
 
 /// Accessibility-driven Ghostty integration: window-geometry capture/restore
-/// (P4) and single-instance new-tab launching (P5).
+/// (P4) and single-instance new-window launching (P5).
 ///
 /// RUNTIME-UNVERIFIED. None of this can be exercised headlessly:
 ///   - It requires the Accessibility permission (AXIsProcessTrusted).
@@ -33,15 +33,17 @@ public enum GhosttyAccessibility {
     }
     #endif
 
-    // MARK: - P5: single-instance new tab
+    // MARK: - P5: single-instance new window
 
-    /// Activate the running Ghostty, open a new tab, and type the command. Best
-    /// effort. Returns true only if we believe we drove the running instance;
-    /// false means the caller should fall back to multi-instance launch.
+    /// Activate the running Ghostty, open a new WINDOW, and type the command.
+    /// Resurrect is window-oriented (one window per session), so each session
+    /// gets its own positionable window inside the single instance — not a tab.
+    /// Best effort. Returns true only if we believe we drove the running
+    /// instance; false means the caller should fall back to multi-instance.
     ///
     /// RUNTIME-UNVERIFIED — keystroke timing & AppleScript automation prompt.
     @discardableResult
-    public static func openInNewTab(cwd: String, command: String) -> Bool {
+    public static func openInNewWindow(cwd: String, command: String) -> Bool {
         #if canImport(AppKit) && canImport(ApplicationServices)
         guard Permissions.accessibilityTrusted() else { return false }
         guard let app = runningGhostty() else { return false }
@@ -50,11 +52,11 @@ public enum GhosttyAccessibility {
         // Give the app a beat to come forward.
         usleep(200_000)
 
-        // New tab: Cmd+T.
-        guard sendCommandKeystroke("t") else { return false }
+        // New window: Cmd+N (NOT Cmd+T — we want a separate, positionable window).
+        guard sendCommandKeystroke("n") else { return false }
         usleep(250_000)
 
-        // The new tab's interactive login shell sources ~/.zshrc (PATH ok).
+        // The new window's interactive login shell sources ~/.zshrc (PATH ok).
         let dir = cwd.isEmpty ? NSHomeDirectory() : cwd
         let line = "cd \(shellQuote(dir)); \(command)\n"
         return typeString(line)
@@ -228,6 +230,7 @@ public enum GhosttyAccessibility {
     static func virtualKeyCode(for char: String) -> CGKeyCode? {
         switch char.lowercased() {
         case "t": return 0x11
+        case "n": return 0x2D
         default: return nil
         }
     }

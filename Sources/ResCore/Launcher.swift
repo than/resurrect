@@ -71,7 +71,7 @@ public enum Launcher {
                 return
             }
             #if canImport(AppKit)
-            if GhosttyAccessibility.openInNewTab(cwd: cwd, command: resume) { return }
+            if GhosttyAccessibility.openInNewWindow(cwd: cwd, command: resume) { return }
             #endif
             // AX path failed / unavailable -> safe fallback.
             terminal.openWindow(cwd: cwd, command: resume, dryRun: dryRun)
