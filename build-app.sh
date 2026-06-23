@@ -59,10 +59,19 @@ cat > "$APP/Contents/Info.plist" <<PLIST_EOF
 </plist>
 PLIST_EOF
 
-# Ad-hoc sign so the app runs without Gatekeeper friction; ignore if codesign
-# is unavailable.
+# Sign with a STABLE identity so macOS TCC (Accessibility/Automation) grants
+# survive rebuilds. Prefer the local self-signed "Resurrect Dev" cert; fall back
+# to ad-hoc (grants will reset each rebuild) if it isn't installed. Override with
+# RES_SIGN_IDENTITY.
+SIGN_ID="${RES_SIGN_IDENTITY:-Resurrect Dev}"
 if command -v codesign >/dev/null 2>&1; then
-  codesign --force --deep --sign - "$APP" 2>/dev/null || true
+  if security find-identity -v -p codesigning 2>/dev/null | grep -q "$SIGN_ID"; then
+    echo "==> signing with: $SIGN_ID"
+    codesign --force --deep --sign "$SIGN_ID" "$APP"
+  else
+    echo "==> WARNING: '$SIGN_ID' not found; ad-hoc signing (TCC grants will reset on rebuild)"
+    codesign --force --deep --sign - "$APP" 2>/dev/null || true
+  fi
 fi
 
 echo "==> built bundle: $APP"
