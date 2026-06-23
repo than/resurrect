@@ -1,0 +1,8 @@
+{
+    "name": "than/ccs-picker",
+    "description": "Laravel Prompts TUI picker for ccs",
+    "require": {
+        "laravel/prompts": "^0.3"
+    },
+    "config": { "optimize-autoloader": true }
+}

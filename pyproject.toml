@@ -1,0 +1,16 @@
+[project]
+name = "resurrect"
+version = "0.1.0"
+description = "Resurrect your coding-agent sessions — surface and relaunch AI coding-agent terminal sessions"
+requires-python = ">=3.10"
+dependencies = []  # core is stdlib-only; the picker UI is PHP/Laravel Prompts
+
+[project.scripts]
+res = "res.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["res"]

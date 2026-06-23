@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# PHP picker deps
+picker/vendor/
+picker/composer.lock
+
+# Swift menu-bar build products
+menubar/.build/
+menubar/*.app/
