@@ -42,7 +42,9 @@ public enum Launcher {
     }
 
     /// Open a window resuming `resume` in `cwd`. dryRun prints the argv.
-    public static func open(cwd: String, resume: String, dryRun: Bool = false) {
+    /// `frame`, if set and the AX single-instance path is taken, positions the
+    /// newly-created window (restore-your-layout). Ignored on the fallback path.
+    public static func open(cwd: String, resume: String, dryRun: Bool = false, frame: WindowFrame? = nil) {
         let prefs = Preferences.shared
         let terminal = prefs.resolvedTerminal()
         let enabled = prefs.singleInstanceEnabled(
@@ -71,7 +73,7 @@ public enum Launcher {
                 return
             }
             #if canImport(AppKit)
-            if GhosttyAccessibility.openInNewWindow(cwd: cwd, command: resume) { return }
+            if GhosttyAccessibility.openInNewWindow(cwd: cwd, command: resume, frame: frame) { return }
             #endif
             // AX path failed / unavailable -> safe fallback.
             terminal.openWindow(cwd: cwd, command: resume, dryRun: dryRun)

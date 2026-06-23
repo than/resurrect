@@ -43,7 +43,7 @@ public enum GhosttyAccessibility {
     ///
     /// RUNTIME-UNVERIFIED — keystroke timing & AppleScript automation prompt.
     @discardableResult
-    public static func openInNewWindow(cwd: String, command: String) -> Bool {
+    public static func openInNewWindow(cwd: String, command: String, frame: WindowFrame? = nil) -> Bool {
         #if canImport(AppKit) && canImport(ApplicationServices)
         guard Permissions.accessibilityTrusted() else { return false }
         guard let app = runningGhostty() else { return false }
@@ -54,7 +54,16 @@ public enum GhosttyAccessibility {
 
         // New window: Cmd+N (NOT Cmd+T — we want a separate, positionable window).
         guard sendCommandKeystroke("n") else { return false }
-        usleep(250_000)
+        usleep(350_000)
+
+        // Position the brand-new window NOW, by grabbing Ghostty's focused
+        // (newest) window directly — no title matching, which is racy because
+        // claude sets the tab title only after it starts. Doing it before typing
+        // the command also overrides Ghostty's "inherit the last window's size"
+        // behavior (the cause of the stacked, same-size windows on restore).
+        if let frame {
+            _ = applyFrameToFocusedWindow(pid: app.processIdentifier, frame: frame)
+        }
 
         // The new window's interactive login shell sources ~/.zshrc (PATH ok).
         let dir = cwd.isEmpty ? NSHomeDirectory() : cwd
@@ -64,6 +73,27 @@ public enum GhosttyAccessibility {
         return false
         #endif
     }
+
+    /// Apply a frame to Ghostty's currently-focused (i.e. just-created) window,
+    /// retrying briefly while the new window materializes. RUNTIME-UNVERIFIED.
+    #if canImport(ApplicationServices)
+    @discardableResult
+    static func applyFrameToFocusedWindow(pid: pid_t, frame: WindowFrame) -> Bool {
+        let appElement = AXUIElementCreateApplication(pid)
+        for _ in 0..<12 {
+            var winRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(
+                appElement, kAXFocusedWindowAttribute as CFString, &winRef) == .success,
+               let winRef {
+                // swiftlint:disable force_cast
+                return applyFrame(frame, to: winRef as! AXUIElement)
+                // swiftlint:enable force_cast
+            }
+            usleep(80_000)
+        }
+        return false
+    }
+    #endif
 
     // MARK: - P4: geometry capture
 

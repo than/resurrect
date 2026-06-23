@@ -168,15 +168,11 @@ final class SessionStore: ObservableObject {
     func open(_ session: Session) {
         let cwd = session.cwd
         let resume = resumeFor(session)
+        // Position the new window at its saved frame (applied at creation time
+        // inside the AX path — reliable, no title matching).
+        let frame = ResCore.Geometry.frame(for: session.id)
         Task.detached(priority: .userInitiated) {
-            Launcher.open(cwd: cwd, resume: resume)
-            // P4 restore: best-effort, gated on AX trust inside the helper. Give
-            // the new window a moment to appear before matching by title.
-            if Preferences.shared.resolvedTerminal().canCaptureGeometry,
-               Permissions.accessibilityTrusted() {
-                try? await Task.sleep(nanoseconds: 600_000_000)
-                _ = GhosttyAccessibility.restoreGeometry(for: session)
-            }
+            Launcher.open(cwd: cwd, resume: resume, frame: frame)
         }
         Task { await poll() }
     }
@@ -186,7 +182,11 @@ final class SessionStore: ObservableObject {
             let saved = ResCore.Snapshot.read()
             for e in saved {
                 guard let agent = AgentRegistry.agent(byName: e.agent) else { continue }
-                Launcher.open(cwd: e.cwd, resume: agent.resumeCommand(e.id, name: e.name))
+                let frame = ResCore.Geometry.frame(for: e.id)
+                Launcher.open(cwd: e.cwd, resume: agent.resumeCommand(e.id, name: e.name), frame: frame)
+                // Sequence: let each new window become frontmost (and get
+                // positioned) before the next opens, so they don't race / stack.
+                try? await Task.sleep(nanoseconds: 900_000_000)
             }
         }
         Task { await poll() }
